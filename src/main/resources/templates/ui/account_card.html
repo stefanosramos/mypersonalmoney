@@ -1,0 +1,47 @@
+<div class="card" id="acc-{a.id}">
+    <div class="row">
+        <div>
+            <div style="font-weight:700">{a.name}</div>
+            <div class="muted">{a.type} {#if !a.active}<span class="badge">inativa</span>{/if}</div>
+        </div>
+        <div style="text-align:right">
+            <div class="muted">Saldo</div>
+            <div class="balance">R$ {a.balance}</div>
+        </div>
+    </div>
+
+    {#if a.active}
+    <div class="form">
+        <input name="description" placeholder="Descrição (ex: Supermercado)" />
+        <input name="amount" placeholder="Valor (ex: 35.90)" />
+        <input name="date" placeholder="Data (YYYY-MM-DD)" />
+
+        <input name="categoryId" placeholder="categoryId (por enquanto)"/>
+        <input name="subCategoryId" placeholder="subCategoryId (opcional)"/>
+
+        <div class="actions">
+            <button class="btn secondary"
+                    hx-post="/ui/accounts/{a.id}/income"
+                    hx-include="#acc-{a.id} input"
+                    hx-target="#acc-{a.id}"
+                    hx-swap="outerHTML">
+                Receita
+            </button>
+
+            <button class="btn"
+                    hx-post="/ui/accounts/{a.id}/expense"
+                    hx-include="#acc-{a.id} input"
+                    hx-target="#acc-{a.id}"
+                    hx-swap="outerHTML">
+                Despesa
+            </button>
+        </div>
+
+        <div class="muted">
+            Por enquanto usamos IDs de categoria/subcategoria. Depois trocamos por dropdowns.
+        </div>
+    </div>
+    {#else}
+    <div class="muted disabled" style="margin-top:12px">Conta inativa</div>
+    {/if}
+</div>

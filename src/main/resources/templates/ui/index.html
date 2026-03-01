@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyPersonalMoney</title>
+
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+    <style>
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; background: #fafafa; }
+        header { padding: 16px 20px; background: white; border-bottom: 1px solid #eee; position: sticky; top: 0; }
+        h1 { margin: 0; font-size: 18px; }
+        .wrap { padding: 16px 20px; }
+        .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+        .card { background: white; border: 1px solid #eee; border-radius: 14px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+        .row { display:flex; justify-content:space-between; gap:12px; align-items: baseline; }
+        .muted { color:#666; font-size: 12px; }
+        .balance { font-weight: 700; font-size: 22px; }
+        .badge { font-size: 12px; padding: 3px 8px; border-radius: 999px; background:#f1f1f1; }
+        .form { margin-top: 12px; display:grid; gap: 8px; }
+        .form input, .form select { width:100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd; background: #fff; }
+        .actions { display:flex; gap: 8px; }
+        .btn { flex:1; padding: 10px; border-radius: 10px; border: 1px solid #ddd; background: #111; color: white; cursor:pointer; }
+        .btn.secondary { background: white; color:#111; }
+        .disabled { opacity:.55; }
+    </style>
+</head>
+
+<body>
+<header>
+    <h1>Contas</h1>
+    <div class="muted">V1 — cards com saldo e lançamento rápido</div>
+</header>
+
+<div class="wrap">
+    <div class="grid">
+        {#for a in accounts}
+        {#include ui/account_card.html a=a /}
+        {/for}
+    </div>
+</div>
+</body>
+</html>
