@@ -1,5 +1,6 @@
 package br.com.mypersonalmoney.ledger;
 
+import br.com.mypersonalmoney.account.Account;
 import br.com.mypersonalmoney.category.Category;
 import br.com.mypersonalmoney.category.SubCategory;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;

@@ -1,0 +1,37 @@
+<div class="row">
+    <div style="font-weight:700">Contas</div>
+    <div class="muted">{accounts.size} cadastradas</div>
+</div>
+
+<form class="form"
+      hx-post="/admin/accounts"
+      hx-target="#admin-accounts"
+      hx-swap="innerHTML">
+    <input name="name" placeholder="Nome (ex: Itaú)" />
+    <select name="type">
+        <option value="">(tipo da conta)</option>
+        {#for t in accountTypes}
+        <option value="{t}">{t}</option>
+        {/for}
+    </select>
+    <button class="btn" type="submit">Criar conta</button>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>Nome</th>
+        <th>Tipo</th>
+        <th>Status</th>
+    </tr>
+    </thead>
+    <tbody>
+    {#for a in accounts}
+    <tr>
+        <td>{a.name}</td>
+        <td>{a.type}</td>
+        <td>{#if a.active}<span class="badge">ativa</span>{#else}<span class="badge">inativa</span>{/if}</td>
+    </tr>
+    {/for}
+    </tbody>
+</table>

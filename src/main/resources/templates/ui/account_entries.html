@@ -1,0 +1,29 @@
+<table>
+    <thead>
+    <tr>
+        <th>Data</th>
+        <th>Descrição</th>
+        <th>Categoria</th>
+        <th style="text-align:right">Valor</th>
+    </tr>
+    </thead>
+    <tbody>
+    {#for e in entries}
+    <tr>
+        <td>{e.date}</td>
+        <td>{e.description}</td>
+        <td>
+            {#if e.categoryName}{e.categoryName}{#else}<span class="muted">(sem)</span>{/if}
+            {#if e.subCategoryName} / {e.subCategoryName}{/if}
+        </td>
+        <td style="font-weight:700; text-align:right">
+            {#if e.direction == 'DEBIT'}
+            <span style="color:#b00020">- {e.amountFormatted}</span>
+            {#else}
+            <span style="color:#0a7a2f">+ {e.amountFormatted}</span>
+            {/if}
+        </td>
+    </tr>
+    {/for}
+    </tbody>
+</table>

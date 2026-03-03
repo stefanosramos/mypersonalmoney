@@ -5,6 +5,7 @@ import jakarta.persistence.EntityManager;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
@@ -103,4 +104,113 @@ public class LedgerQueryService {
             return BRL_FORMAT.format(value);
         }
     }
+
+    public record EntryRow(
+            Long txnId,
+            java.time.LocalDate date,
+            String description,
+            String direction,
+            java.math.BigDecimal amount,
+            String amountFormatted,
+            String categoryName,
+            String subCategoryName
+    ) {}
+
+    public record ExpenseByCategoryRow(
+            String categoryName,
+            java.math.BigDecimal total,
+            String totalFormatted
+    ) {}
+
+    public List<EntryRow> listEntries(Long accountId, LocalDate from, LocalDate to, Integer limit) {
+
+        StringBuilder sql = new StringBuilder("""
+        select
+          t.id as txn_id,
+          t.txn_date,
+          t.description,
+          e.direction,
+          e.amount,
+          c.name as category_name,
+          s.name as subcategory_name
+        from ledger_entry e
+        join ledger_txn t on t.id = e.ledger_txn_id
+        left join category c on c.id = e.category_id
+        left join subcategory s on s.id = e.subcategory_id
+        where e.account_id = :accountId
+        """);
+
+        if (from != null) sql.append(" and t.txn_date >= :from");
+        if (to != null)   sql.append(" and t.txn_date <= :to");
+
+        sql.append(" order by t.txn_date desc, t.id desc, e.id desc");
+
+        var q = em.createNativeQuery(sql.toString(), Object[].class)
+                .setParameter("accountId", accountId);
+
+        if (from != null) q.setParameter("from", from);
+        if (to != null)   q.setParameter("to", to);
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = q.getResultList();
+
+        var mapped = rows.stream()
+                .map(r -> {
+                    BigDecimal amount = toBigDecimal(r[4]);
+
+                    return new EntryRow(
+                            ((Number) r[0]).longValue(),
+                            (LocalDate) r[1],
+                            (String) r[2],
+                            (String) r[3],
+                            amount,
+                            formatBRL(amount),
+                            (String) r[5],
+                            (String) r[6]
+                    );
+                })
+                .toList();
+
+        if (limit == null || limit <= 0 || mapped.size() <= limit) return mapped;
+        return mapped.subList(0, limit);
+    }
+
+    public List<ExpenseByCategoryRow> expenseByCategory(Long accountId, LocalDate from, LocalDate to) {
+
+        StringBuilder sql = new StringBuilder("""
+        select
+          coalesce(c.name, '(sem categoria)') as category_name,
+          sum(e.amount) as total
+        from ledger_entry e
+        join ledger_txn t on t.id = e.ledger_txn_id
+        left join category c on c.id = e.category_id
+        where e.account_id = :accountId
+          and e.direction = 'DEBIT'
+        """);
+
+        if (from != null) sql.append(" and t.txn_date >= :from");
+        if (to != null)   sql.append(" and t.txn_date <= :to ");
+
+        sql.append("""
+        group by coalesce(c.name, '(sem categoria)')
+        order by total desc
+        """);
+
+        var q = em.createNativeQuery(sql.toString(), Object[].class)
+                .setParameter("accountId", accountId);
+
+        if (from != null) q.setParameter("from", from);
+        if (to != null)   q.setParameter("to", to);
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = q.getResultList();
+
+        return rows.stream()
+                .map(r -> {
+                    var total = toBigDecimal(r[1]);
+                    return new ExpenseByCategoryRow((String) r[0], total, formatBRL(total));
+                })
+                .toList();
+    }
+
 }

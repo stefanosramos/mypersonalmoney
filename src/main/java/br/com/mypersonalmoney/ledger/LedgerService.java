@@ -1,5 +1,7 @@
 package br.com.mypersonalmoney.ledger;
 
+import br.com.mypersonalmoney.account.Account;
+import br.com.mypersonalmoney.account.AccountType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -215,6 +217,69 @@ public class LedgerService {
         entry.amount = amount;
         entry.direction = direction;
         entry.memo = direction == EntryDirection.CREDIT ? "Income" : "Expense";
+        entry.category = category;
+        entry.subCategory = subCategory;
+        entry.persist();
+
+        return txn.id;
+    }
+
+    @Transactional
+    public Long createPosting(Long accountId,
+                              Long categoryId,
+                              Long subCategoryId,
+                              BigDecimal amount,
+                              LocalDate date,
+                              String description) {
+
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("amount must be > 0");
+        }
+
+        Account account = Account.findById(accountId);
+        if (account == null) throw new IllegalArgumentException("account not found");
+        if (!account.active) throw new IllegalArgumentException("account inactive");
+
+        // Resolve category/subcategory and enforce coherence
+        br.com.mypersonalmoney.category.Category category = null;
+        br.com.mypersonalmoney.category.SubCategory subCategory = null;
+
+        if (subCategoryId != null) {
+            subCategory = br.com.mypersonalmoney.category.SubCategory.findById(subCategoryId);
+            if (subCategory == null) throw new IllegalArgumentException("subcategory not found");
+            if (!subCategory.active) throw new IllegalArgumentException("subcategory inactive");
+
+            category = subCategory.category; // implicit
+            if (category == null) throw new IllegalArgumentException("subcategory has no category");
+        } else {
+            if (categoryId == null) throw new IllegalArgumentException("category is required when subcategory is not provided");
+            category = br.com.mypersonalmoney.category.Category.findById(categoryId);
+        }
+
+        if (category == null) throw new IllegalArgumentException("category not found");
+        if (!category.active) throw new IllegalArgumentException("category inactive");
+
+        // If both provided, ensure they match
+        if (subCategory != null && categoryId != null && !category.id.equals(categoryId)) {
+            throw new IllegalArgumentException("categoryId must match subcategory.category");
+        }
+
+        // Decide direction based on category type
+        EntryDirection direction = (category.type == br.com.mypersonalmoney.category.CategoryType.INCOME)
+                ? EntryDirection.CREDIT
+                : EntryDirection.DEBIT;
+
+        LedgerTxn txn = new LedgerTxn();
+        txn.txnDate = (date != null) ? date : LocalDate.now();
+        txn.description = description;
+        txn.persist();
+
+        LedgerEntry entry = new LedgerEntry();
+        entry.txn = txn;
+        entry.account = account;
+        entry.amount = amount;
+        entry.direction = direction;
+        entry.memo = (direction == EntryDirection.CREDIT) ? "Income" : "Expense";
         entry.category = category;
         entry.subCategory = subCategory;
         entry.persist();

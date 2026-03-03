@@ -1,0 +1,16 @@
+<table>
+    <thead>
+    <tr>
+        <th>Categoria</th>
+        <th>Total</th>
+    </tr>
+    </thead>
+    <tbody>
+    {#for r in expenseRows}
+    <tr>
+        <td>{r.categoryName}</td>
+        <td style="text-align:right; font-weight:700">{r.totalFormatted}</td>
+    </tr>
+    {/for}
+    </tbody>
+</table>

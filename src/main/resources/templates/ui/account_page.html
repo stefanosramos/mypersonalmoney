@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-br" xmlns:hx-on="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{a.name} - MyPersonalMoney</title>
+
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; background: #fafafa; }
+        header { padding: 16px 20px; background: white; border-bottom: 1px solid #eee; position: sticky; top: 0; display:flex; justify-content:space-between; gap:12px; }
+        h1 { margin: 0; font-size: 18px; }
+        .muted { color:#666; font-size: 12px; }
+        .wrap { padding: 16px 20px; display:grid; gap: 16px; }
+        .card { background: white; border: 1px solid #eee; border-radius: 14px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+        .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; flex-wrap: wrap; }
+        .balance { font-weight: 800; font-size: 22px; }
+        .filters { display:flex; gap: 8px; flex-wrap: wrap; }
+        .chip { padding: 8px 10px; border-radius: 999px; border: 1px solid #ddd; background: #fff; cursor:pointer; font-size: 12px; }
+        .form { display:grid; gap: 8px; margin-top: 10px; }
+        .form input, .form select { width:100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd; background: #fff; }
+        .btn { padding: 10px; border-radius: 10px; border: 1px solid #ddd; background: #111; color: white; cursor:pointer; }
+        table { width:100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align:left; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+    </style>
+</head>
+
+<body>
+<header>
+    <div>
+        <h1>{a.name} <span class="muted">({a.type})</span></h1>
+        <div class="muted"><a href="/" style="text-decoration:none;color:#111">← voltar</a></div>
+    </div>
+    <div style="text-align:right">
+        <div class="muted">Saldo</div>
+        <div class="balance">{a.balanceFormatted}</div>
+    </div>
+</header>
+
+<div class="wrap">
+
+    <div class="card">
+        <div style="font-weight:700">Lançamento rápido</div>
+
+        <!-- form posta e volta para esta página -->
+        <form class="form" method="post" action="/accounts/{a.id}/posting">
+            <input type="hidden" name="range" value="{range}"/>
+
+            <input name="description" placeholder="Descrição (ex: Supermercado)" />
+            <input name="amount"
+                   inputmode="decimal"
+                   placeholder="Valor (ex: 50,50)"
+                   required />
+            <input name="date" type="date" value="{today}" />
+
+            <select name="categoryId" id="cat-main"
+                    hx-get="/ui/subcategories/options"
+                    hx-trigger="change"
+                    hx-target="#subcat-main"
+                    hx-include="#cat-main"
+                    hx-swap="innerHTML">
+                <option value="">(selecione uma categoria)</option>
+
+                <optgroup label="Receitas">
+                    {#for c in categories}{#if c.type.toString == 'INCOME'}
+                    <option value="{c.id}">{c.name}</option>
+                    {/if}{/for}
+                </optgroup>
+
+                <optgroup label="Despesas">
+                    {#for c in categories}{#if c.type.toString == 'EXPENSE'}
+                    <option value="{c.id}">{c.name}</option>
+                    {/if}{/for}
+                </optgroup>
+            </select>
+
+            <select id="subcat-main" name="subCategoryId">
+                <option value="">(sem subcategoria)</option>
+            </select>
+
+            <button class="btn" type="submit">Lançar</button>
+            <div class="muted">A categoria define se é receita ou despesa.</div>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="row">
+            <div style="font-weight:700">Lançamentos</div>
+
+            <div class="filters">
+                <button class="chip"
+                        onclick="changeRange({a.id}, 'month_current')">
+                    Mês atual
+                </button>
+
+                <button class="chip"
+                        onclick="changeRange({a.id}, 'month_prev')">
+                    Mês anterior
+                </button>
+
+                <button class="chip"
+                        onclick="changeRange({a.id}, 'last10')">
+                    10 dias
+                </button>
+
+                <button class="chip"
+                        onclick="changeRange({a.id}, 'last15')">
+                    15 dias
+                </button>
+
+                <button class="chip"
+                        onclick="changeRange({a.id}, 'last30')">
+                    30 dias
+                </button>
+
+                <button class="chip"
+                        onclick="changeRange({a.id}, 'all')">
+                    Todos
+                </button>
+
+            </div>
+        </div>
+
+        <div id="entries">
+            {#include ui/account_entries.html entries=entries /}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="row">
+            <div style="font-weight:700">Despesas por categoria</div>
+            <div class="muted">no período selecionado</div>
+        </div>
+
+        <div style="max-width:520px; margin-top:12px;">
+            <canvas id="expenseChart"></canvas>
+        </div>
+
+        <div id="expenseSummary">
+            {#include ui/account_expense_summary.html expenseRows=expenseRows /}
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let expenseChart;
+
+    async function loadExpenseChart(a.id, range) {
+      const res = await fetch(`/accounts/${accountId}/expense-summary.json?range=${encodeURIComponent(range)}`);
+      const data = await res.json();
+
+      const labels = data.map(x => x.label);
+      const totals = data.map(x => Number(String(x.total).replace(',', '.')));
+
+      const ctx = document.getElementById('expenseChart');
+
+      if (expenseChart) {
+        expenseChart.data.labels = labels;
+        expenseChart.data.datasets[0].data = totals;
+        expenseChart.update();
+        return;
+      }
+
+      expenseChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ data: totals }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+      function changeRange(accountId, range) {
+    // Atualiza listagem
+    htmx.ajax('GET',
+      `/accounts/${accountId}/entries?range=${range}`,
+      '#entries');
+
+    // Atualiza tabela de resumo
+    htmx.ajax('GET',
+      `/accounts/${accountId}/expense-summary?range=${range}`,
+      '#expenseSummary');
+
+    // Atualiza gráfico
+    loadExpenseChart(accountId, range);
+
+    // Inicializa com o range atual do server
+    loadExpenseChart({a.id}, "{range}");
+
+
+</script>
+
+</body>
+</html>

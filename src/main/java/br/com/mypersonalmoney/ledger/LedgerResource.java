@@ -1,6 +1,6 @@
 package br.com.mypersonalmoney.ledger;
 
-import jakarta.transaction.Transactional;
+import br.com.mypersonalmoney.account.AccountType;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;

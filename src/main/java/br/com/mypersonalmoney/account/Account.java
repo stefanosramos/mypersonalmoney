@@ -1,4 +1,4 @@
-package br.com.mypersonalmoney.ledger;
+package br.com.mypersonalmoney.account;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;

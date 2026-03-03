@@ -1,0 +1,73 @@
+<div class="row">
+    <div style="font-weight:700">Categorias & Subcategorias</div>
+    <div class="muted">{categories.size} / {subcategories.size}</div>
+</div>
+
+<form class="form"
+      hx-post="/admin/categories"
+      hx-target="#admin-categories"
+      hx-swap="innerHTML">
+    <input name="name" placeholder="Categoria (ex: Alimentação)" />
+    <select name="type">
+        <option value="">(tipo)</option>
+        {#for t in categoryTypes}
+        <option value="{t}">{t}</option>
+        {/for}
+    </select>
+    <button class="btn" type="submit">Criar categoria</button>
+</form>
+
+<form class="form"
+      hx-post="/admin/subcategories"
+      hx-target="#admin-categories"
+      hx-swap="innerHTML">
+    <select name="categoryId">
+        <option value="">(categoria para subcategoria)</option>
+        {#for c in categories}
+        <option value="{c.id}">
+            {c.type} — {c.name}
+        </option>
+        {/for}
+    </select>
+    <input name="name" placeholder="Subcategoria (ex: Mercado)" />
+    <button class="btn" type="submit">Criar subcategoria</button>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>Categoria</th>
+        <th>Tipo</th>
+        <th>Status</th>
+    </tr>
+    </thead>
+    <tbody>
+    {#for c in categories}
+    <tr>
+        <td>{c.name}</td>
+        <td>{c.type}</td>
+        <td>{#if c.active}<span class="badge">ativa</span>{#else}<span class="badge">inativa</span>{/if}</td>
+    </tr>
+    {/for}
+    </tbody>
+</table>
+
+<div style="margin-top:12px; font-weight:700">Subcategorias</div>
+<table>
+    <thead>
+    <tr>
+        <th>Subcategoria</th>
+        <th>Categoria</th>
+        <th>Status</th>
+    </tr>
+    </thead>
+    <tbody>
+    {#for s in subcategories}
+    <tr>
+        <td>{s.name}</td>
+        <td>{s.category.name}</td>
+        <td>{#if s.active}<span class="badge">ativa</span>{#else}<span class="badge">inativa</span>{/if}</td>
+    </tr>
+    {/for}
+    </tbody>
+</table>
