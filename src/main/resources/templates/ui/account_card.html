@@ -8,7 +8,10 @@
         </div>
         <div style="text-align:right">
             <div class="muted">Saldo</div>
-            <div class="balance">{a.balanceFormatted}</div>
+            <div class="balance"
+                 style="color:{#if a.balance < 0}#b00020{#else}inherit{/if}">
+                {a.balanceFormatted}
+            </div>
         </div>
     </div>
 

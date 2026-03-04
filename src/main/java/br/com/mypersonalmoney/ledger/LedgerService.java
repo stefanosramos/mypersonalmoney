@@ -9,6 +9,7 @@ import jakarta.transaction.Transactional;
 import br.com.mypersonalmoney.category.Category;
 import br.com.mypersonalmoney.category.CategoryType;
 import br.com.mypersonalmoney.category.SubCategory;
+import jakarta.ws.rs.NotFoundException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -282,6 +283,58 @@ public class LedgerService {
         entry.memo = (direction == EntryDirection.CREDIT) ? "Income" : "Expense";
         entry.category = category;
         entry.subCategory = subCategory;
+        entry.persist();
+
+        return txn.id;
+    }
+
+    @Transactional
+    public void deleteTxn(Long accountId, Long txnId) {
+
+        long cnt = br.com.mypersonalmoney.ledger.LedgerEntry.count(
+                "txn.id = ?1 and account.id = ?2",
+                txnId, accountId
+        );
+
+        if (cnt == 0) {
+            throw new NotFoundException("transaction not found for this account");
+        }
+
+        // apaga entries da transação (podem ser 1 ou mais)
+        br.com.mypersonalmoney.ledger.LedgerEntry.delete("txn.id = ?1", txnId);
+
+        // apaga a transação
+        br.com.mypersonalmoney.ledger.LedgerTxn.deleteById(txnId);
+    }
+
+    @Transactional
+    public Long createOpeningBalance(Long accountId, BigDecimal balance, LocalDate date) {
+        if (balance == null || balance.signum() == 0) {
+            return null; // nada a fazer
+        }
+
+        Account account = Account.findById(accountId);
+        if (account == null) throw new IllegalArgumentException("account not found");
+        if (!account.active) throw new IllegalArgumentException("account inactive");
+
+        LedgerTxn txn = new LedgerTxn();
+        txn.txnDate = (date != null) ? date : LocalDate.now();
+        txn.description = "Saldo inicial";
+        txn.persist();
+
+        LedgerEntry entry = new LedgerEntry();
+        entry.txn = txn;
+        entry.account = account;
+
+        entry.amount = balance.abs();
+        entry.direction = (balance.signum() >= 0) ? EntryDirection.CREDIT : EntryDirection.DEBIT;
+
+        entry.memo = "Opening balance";
+
+        // IMPORTANT: sem categoria/subcategoria
+        entry.category = null;
+        entry.subCategory = null;
+
         entry.persist();
 
         return txn.id;

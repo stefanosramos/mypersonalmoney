@@ -9,8 +9,10 @@ import io.quarkus.qute.Template;
 import io.quarkus.qute.TemplateInstance;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.MediaType;
 
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -34,22 +36,24 @@ public class AccountPageResource {
 
     @GET
     @Path("/{accountId}")
-    public TemplateInstance view(@PathParam("accountId") Long accountId) {
+    public TemplateInstance view(@PathParam("accountId") Long accountId,
+                                 @QueryParam("range") String range) {
         var cards = query.listAccountCards();
         var card = cards.stream().filter(a -> a.id().equals(accountId)).findFirst()
                 .orElseThrow(() -> new NotFoundException("account not found"));
 
         var cats = Category.<Category>list("active=true order by type, name");
 
-        // default: mês corrente
-        Range r = Range.currentMonth();
+        Range r = Range.fromKey(range);
+        String rk = (range == null || range.isBlank()) ? "month_current" : range;
+
         return page
                 .data("a", card)
                 .data("categories", cats)
-                .data("range", "month_current")
+                .data("today", LocalDate.now().toString())
+                .data("range", rk)
                 .data("entries", query.listEntries(accountId, r.from, r.to, 50))
-                .data("expenseRows", query.expenseByCategory(accountId, r.from, r.to))
-                .data("today", java.time.LocalDate.now().toString());
+                .data("expenseRows", query.expenseByCategory(accountId, r.from, r.to));
     }
 
     // HTMX: trocar listagem
@@ -58,7 +62,10 @@ public class AccountPageResource {
     public TemplateInstance entries(@PathParam("accountId") Long accountId,
                                     @QueryParam("range") String range) {
         Range r = Range.fromKey(range);
-        return entries.data("entries", query.listEntries(accountId, r.from, r.to, r.limit));
+        return entries
+                .data("entries", query.listEntries(accountId, r.from, r.to, r.limit))
+                .data("accountId", accountId)
+                .data("range", range);
     }
 
     // HTMX: trocar resumo despesas
@@ -74,7 +81,7 @@ public class AccountPageResource {
     @POST
     @Path("/{accountId}/posting")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public TemplateInstance posting(@PathParam("accountId") Long accountId,
+    public Response posting(@PathParam("accountId") Long accountId,
                                     @FormParam("categoryId") Long categoryId,
                                     @FormParam("subCategoryId") Long subCategoryId,
                                     @FormParam("amount") String amount,
@@ -92,7 +99,12 @@ public class AccountPageResource {
         );
 
         // após lançar, re-renderiza a página inteira (mais simples na V1)
-        return view(accountId).data("range", range == null ? "month_current" : range);
+        String r = (range == null || range.isBlank()) ? "month_current" : range;
+
+        // 303 = “See Other” (POST -> GET)
+        return Response.seeOther(java.net.URI.create("/accounts/" + accountId + "?range=" + r))
+                .status(303)
+                .build();
     }
 
     static class Range {
@@ -153,5 +165,19 @@ public class AccountPageResource {
                         "total", x.total()   // BigDecimal vai como number/string dependendo do Jackson
                 ))
                 .toList();
+    }
+
+    @POST
+    @Path("/{accountId}/txns/{txnId}/delete")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response deleteTxn(@PathParam("accountId") Long accountId,
+                              @PathParam("txnId") Long txnId,
+                              @FormParam("range") String range) {
+
+        ledger.deleteTxn(accountId, txnId);
+
+        String r = (range == null || range.isBlank()) ? "month_current" : range;
+
+        return Response.seeOther(URI.create("/accounts/" + accountId + "?range=" + r)).build();
     }
 }
