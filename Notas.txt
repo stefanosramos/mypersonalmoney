@@ -1,0 +1,16 @@
+####Rodar um select dentro do BD do container#####
+docker compose exec -T db psql -U mymoney -d mypersonalmoney -c "update account set active=false where id=123;"
+
+########Entrar no Postgres do PRD e abrir o psql (interativo)#########
+docker compose exec db psql -U mymoney -d mypersonalmoney
+
+#########Rebuild da aplicação###########
+cria versão (.jar)
+./mvnw clean package -DskipTests
+restart no container
+docker compose up -d --build
+olhar logs
+docker compose logs -f app
+
+#########Rodar Quarkus dev########
+./mvnw quarkus:dev

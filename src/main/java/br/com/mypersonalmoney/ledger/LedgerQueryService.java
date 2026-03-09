@@ -213,4 +213,31 @@ public class LedgerQueryService {
                 .toList();
     }
 
+    public BigDecimal consolidatedBalance() {
+        String sql = """
+        select coalesce(sum(x.balance), 0)
+        from (
+            select
+              a.id,
+              coalesce(sum(
+                case e.direction
+                  when 'CREDIT' then e.amount
+                  when 'DEBIT'  then -e.amount
+                end
+              ), 0) as balance
+            from account a
+            left join ledger_entry e on e.account_id = a.id
+            where a.active = true
+            group by a.id
+        ) x
+        """;
+
+        Object result = em.createNativeQuery(sql).getSingleResult();
+        return toBigDecimal(result);
+    }
+
+    public String consolidatedBalanceFormatted() {
+        return formatBRL(consolidatedBalance());
+    }
+
 }

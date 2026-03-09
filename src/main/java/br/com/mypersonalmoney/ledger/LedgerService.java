@@ -38,6 +38,13 @@ public class LedgerService {
             throw new IllegalArgumentException("fromAccountId and toAccountId must be different");
         }
 
+        if (fromAccountId == null) {
+            throw new IllegalArgumentException("fromAccountId is required");
+        }
+        if (toAccountId == null) {
+            throw new IllegalArgumentException("toAccountId is required");
+        }
+
         Account from = Account.findById(fromAccountId);
         Account to = Account.findById(toAccountId);
 
@@ -339,4 +346,6 @@ public class LedgerService {
 
         return txn.id;
     }
+
+
 }

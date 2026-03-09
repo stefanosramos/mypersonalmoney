@@ -72,6 +72,20 @@
             <artifactId>quarkus-junit</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-security-jpa</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-elytron-security-bcrypt</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-vertx-http</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

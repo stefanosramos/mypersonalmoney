@@ -1,5 +1,6 @@
 package br.com.mypersonalmoney.ui;
 
+import br.com.mypersonalmoney.account.Account;
 import br.com.mypersonalmoney.category.Category;
 import br.com.mypersonalmoney.category.SubCategory;
 import br.com.mypersonalmoney.ledger.LedgerQueryService;
@@ -11,8 +12,10 @@ import io.quarkus.qute.TemplateInstance;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -43,7 +46,10 @@ public class UiResource {
         return index
                 .data("accounts", query.listAccountCards())
                 .data("categories", Category.<Category>list("active=true order by type, name"))
-                .data("today", java.time.LocalDate.now().toString());
+                .data("today", java.time.LocalDate.now().toString())
+                .data("transferAccounts", Account.list("active = true order by name"))
+                .data("consolidatedBalance", query.consolidatedBalance())
+                .data("consolidatedBalanceFormatted", query.consolidatedBalanceFormatted());
     }
 
     // HTMX: criar INCOME (form urlencoded)
@@ -152,6 +158,26 @@ public class UiResource {
         );
 
         return subCategoryOptions.data("subs", subs);
+    }
+
+    @POST
+    @Path("/ui/transfer")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response transfer(@FormParam("fromAccountId") Long fromAccountId,
+                             @FormParam("toAccountId") Long toAccountId,
+                             @FormParam("amount") String amount,
+                             @FormParam("date") String date,
+                             @FormParam("description") String description) {
+
+        ledger.createTransfer(
+                fromAccountId,
+                toAccountId,
+                MoneyParser.parseBRL(amount),
+                parseDateOrToday(date),
+                description
+        );
+
+        return Response.seeOther(URI.create("/")).build();
     }
 
 }
