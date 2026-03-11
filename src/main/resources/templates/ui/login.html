@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<div class="wrap" style="max-width:400px;margin:auto;margin-top:80px">
+
+    <div class="card">
+
+        <h2>MyPersonalMoney</h2>
+
+        <form method="post" action="/j_security_check" class="form">
+
+            <input name="j_username" placeholder="Usuário" required>
+
+            <input type="password" name="j_password" placeholder="Senha" required>
+
+            <button class="btn">Entrar</button>
+
+        </form>
+
+        {#if param:error}
+        <div style="color:red;margin-top:10px">
+            Usuário ou senha inválidos
+        </div>
+        {/if}
+
+    </div>
+</div>
+
+</body>
+</html>
